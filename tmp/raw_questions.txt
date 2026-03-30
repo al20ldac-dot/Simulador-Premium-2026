@@ -1,0 +1,60 @@
+1. Opción Múltiple (OM)
+Enunciado: Un equipo de desarrollo está migrando una aplicación monolítica al framework
+mvc-educaysoft mencionado en clases. Durante la implementación, se observa que la lógica de
+validación de formatos de datos de entrada y la conexión directa a la base de datos se
+encuentran mezcladas dentro del archivo de la "Vista". ¿Qué principio de la arquitectura
+MVC se está vulnerando y cuál es la consecuencia técnica inmediata?
+A) Se vulnera el Modelo; impide la reutilización de la interfaz de usuario en otros dispositivos.
+B) Se vulnera la Vista; provoca un acoplamiento estrecho que dificultará el mantenimiento y la
+escalabilidad de la lógica de negocio.
+C) Se vulnera el Controlador; genera una redundancia de datos en el servidor de aplicaciones.
+D) Se vulnera la Cohesión; causa que el sistema no pueda ser versionado en repositorios como
+GitHub.
+Respuesta: B
+Justificación: Según Pressman y Maxim (2020), la separación de intereses en MVC busca que la
+Vista solo se encargue de la presentación. Al incluir lógica de acceso a datos (Modelo) en la Vista,
+se rompe la modularidad, aumentando la complejidad del mantenimiento.
+2. Opción Múltiple (OM)
+Enunciado: En una sesión de Planning Poker para un sistema de gestión académica, el equipo
+Scrum presenta una alta dispersión en las estimaciones de una Historia de Usuario (HU) sobre
+"Generación de Reportes Dinámicos". Dos desarrolladores votan 3 puntos, mientras que el
+Scrum Master nota que el Product Owner insiste en que es una tarea simple, pero el
+Desarrollador Senior vota 21 puntos. ¿Cuál es la acción técnica correcta a seguir bajo el
+marco de trabajo Scrum?
+A) Promediar los votos para obtener un valor intermedio (12 puntos) y avanzar a la siguiente HU.
+B) Tomar el valor del Desarrollador Senior por ser el de mayor experiencia técnica en el equipo.
+C) Iniciar un debate técnico donde los extremos expliquen sus razones, ya que la dispersión indica
+falta de claridad en los requerimientos o complejidad técnica oculta.
+D) El Product Owner debe asignar el valor final puesto que él conoce el valor de negocio de la
+funcionalidad.
+Respuesta: C
+Justificación: En la metodología ágil Scrum, la estimación es un proceso colaborativo. La
+dispersión en el Planning Poker se utiliza para identificar incertidumbres o falta de detalles en los
+requerimientos antes de comprometer el trabajo en el Sprint.
+3. Opción Múltiple (OM)
+Enunciado: El artículo científico analizado en clase "¿Existe una situación de crisis del
+software educativo?" plantea que muchos proyectos fallan por la falta de un enfoque
+sistémico. Si un proyecto de software educativo presenta errores constantes tras cada
+actualización y el costo de corrección es superior al de desarrollo original, ¿en qué fase del
+ciclo de vida y bajo qué métrica se evidencia el problema principal?
+A) En la fase de Implementación; métrica de Líneas de Código (LOC).
+B) En la fase de Requerimientos; métrica de Puntos de Función.
+C) En la fase de Mantenimiento; evidenciando una falta de control de calidad y pruebas de
+regresión.
+D) En la fase de Diseño; por el uso inadecuado de herramientas de prototipado.
+Respuesta: C
+Justificación: Sommerville (2011) indica que el mantenimiento representa la mayor parte del costo
+del ciclo de vida. Una crisis de software se manifiesta cuando el software es difícil de evolucionar
+debido a una mala base de ingeniería previa.
+... (aquí procesaría las 100) ...
+...
+Pregunta 100
+Basándose en la identificación de puertos, ¿cuál es la principal ventaja técnica del estándar
+USB-C frente a sus versiones anteriores?
+A) Solo sirve para cargar la batería, no transmite datos.
+B) Es reversible (se puede conectar en cualquier posición) y soporta mayores velocidades de datos y
+carga de energía.
+C) Es un puerto analógico que no requiere cables de cobre.
+D) Solo es compatible con teclados y ratones antiguos.
+Respuesta: B
+Justificación: USB-C es el estándar moderno versátil que permite datos, video y alimentación en un conector pequeño y reversible
