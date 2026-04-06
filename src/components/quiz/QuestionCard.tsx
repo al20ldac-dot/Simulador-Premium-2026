@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 export function QuestionCard() {
-  const { state, submitAnswer, currentAttempts, maxAttempts, lastFeedback, nextQuestion } = useQuiz();
+  const { state, submitAnswer, lastFeedback, nextQuestion } = useQuiz();
   const currentQuestion = state.questions[state.currentQuestionIndex];
 
   if (!currentQuestion) return null;
@@ -21,8 +21,6 @@ export function QuestionCard() {
     submitAnswer(key);
   };
 
-  const attemptsLeft = maxAttempts - currentAttempts;
-  const isLastAttempt = attemptsLeft === 1;
 
   const availableOptions = (Object.entries(currentQuestion.opciones) as [('A' | 'B' | 'C' | 'D'), string][])
     .filter(([_, value]) => value && value.trim() !== "" && value !== "N/A");
@@ -48,13 +46,7 @@ export function QuestionCard() {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 pt-4 border-t border-white/5">
-              <div className="p-3 md:p-4 bg-white/5 rounded-xl border border-white/10 shadow-inner group flex flex-col items-center text-center">
-                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-slate-400 transition-colors">Intentos</p>
-                <p className={cn("font-black text-2xl leading-none", isLastAttempt && !lastFeedback?.isFinished ? "text-red-400 animate-pulse" : "text-white")}>
-                  {attemptsLeft}
-                </p>
-              </div>
+            <div className="grid grid-cols-1 gap-2 pt-4 border-t border-white/5">
               <div className="p-3 md:p-4 bg-white/5 rounded-xl border border-white/10 shadow-inner group flex flex-col items-center text-center">
                 <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-slate-400 transition-colors">Valor</p>
                 <p className="font-black text-2xl leading-none tabular-nums text-white">1.00</p>
@@ -85,13 +77,6 @@ export function QuestionCard() {
               <div className="h-4 w-[1px] bg-white/20" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 truncate max-w-[120px]">
                 {currentQuestion.categoria}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Intentos:</span>
-              <span className={cn("text-xs font-black", isLastAttempt && !lastFeedback?.isFinished ? "text-red-400" : "text-white")}>
-                {attemptsLeft}
               </span>
             </div>
           </div>
@@ -193,13 +178,8 @@ export function QuestionCard() {
                         "font-black text-lg md:text-2xl uppercase tracking-tighter leading-none",
                         lastFeedback.isCorrect ? "text-green-900" : "text-red-900"
                       )}>
-                        {lastFeedback.isCorrect ? 'Validación Exitosa' : (lastFeedback.isFinished ? 'Intentos Agotados' : 'Incorrecto')}
+                        {lastFeedback.isCorrect ? 'Validación Exitosa' : 'Incorrecto'}
                       </h4>
-                      {!lastFeedback.isFinished && (
-                        <p className="text-red-700 text-[10px] md:text-[12px] font-black uppercase tracking-[0.2em] mt-2">
-                          Te quedan {attemptsLeft} oportunidades.
-                        </p>
-                      )}
                     </div>
                   </div>
                   

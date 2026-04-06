@@ -13,39 +13,44 @@ import { useQuiz } from '../quiz/QuizProvider';
 
 export function StatsCharts() {
   const { state } = useQuiz();
-  
-  const correctCount = state.responses.filter(r => r.isCorrect).length;
-  const incorrectCount = state.questions.length - correctCount;
-  const percentage = Math.round((correctCount / (state.questions.length || 1)) * 100);
+  const { pieData, barData, percentage } = React.useMemo(() => {
+    const correctCount = state.responses.filter(r => r.isCorrect).length;
+    const incorrectCount = state.questions.length - correctCount;
+    const calcPercentage = Math.round((correctCount / (state.questions.length || 1)) * 100);
 
-  const pieData = [
-    { name: 'Correctas', value: correctCount, fill: 'hsl(142, 76%, 36%)' }, // Verde Esmeralda
-    { name: 'Incorrectas', value: incorrectCount, fill: 'hsl(0, 84%, 60%)' }, // Rojo Carmesí
-  ];
+    const generatedPieData = [
+      { name: 'Correctas', value: correctCount, fill: 'hsl(142, 76%, 36%)' },
+      { name: 'Incorrectas', value: incorrectCount, fill: 'hsl(0, 84%, 60%)' },
+    ];
 
-  // Group by category
-  const categoryStats = state.questions.reduce((acc, q) => {
-    const response = state.responses.find(r => r.questionId === q.id);
-    if (!acc[q.categoria]) {
-      acc[q.categoria] = { category: q.categoria, correct: 0, total: 0 };
-    }
-    acc[q.categoria].total += 1;
-    if (response?.isCorrect) acc[q.categoria].correct += 1;
-    return acc;
-  }, {} as Record<string, { category: string, correct: number, total: number }>);
+    const responsesMap = new Map();
+    state.responses.forEach(r => responsesMap.set(r.questionId, r));
 
-  const chartColors = [
-    'hsl(var(--chart-1))',
-    'hsl(var(--chart-4))',
-    'hsl(var(--chart-5))',
-    'hsl(var(--chart-3))',
-  ];
+    const categoryStats = state.questions.reduce((acc, q) => {
+      const response = responsesMap.get(q.id);
+      if (!acc[q.categoria]) {
+        acc[q.categoria] = { category: q.categoria, correct: 0, total: 0 };
+      }
+      acc[q.categoria].total += 1;
+      if (response?.isCorrect) acc[q.categoria].correct += 1;
+      return acc;
+    }, {} as Record<string, { category: string, correct: number, total: number }>);
 
-  const barData = Object.values(categoryStats).map((s, index) => ({
-    categoria: s.category,
-    porcentaje: Math.round((s.correct / s.total) * 100),
-    fill: chartColors[index % chartColors.length]
-  }));
+    const chartColors = [
+      'hsl(var(--chart-1))',
+      'hsl(var(--chart-4))',
+      'hsl(var(--chart-5))',
+      'hsl(var(--chart-3))',
+    ];
+
+    const generatedBarData = Object.values(categoryStats).map((s, index) => ({
+      categoria: s.category,
+      porcentaje: Math.round((s.correct / s.total) * 100),
+      fill: chartColors[index % chartColors.length]
+    }));
+
+    return { pieData: generatedPieData, barData: generatedBarData, percentage: calcPercentage };
+  }, [state.questions, state.responses]);
 
   const chartConfig: ChartConfig = {
     correct: { label: "Correctas", color: "hsl(var(--chart-2))" },

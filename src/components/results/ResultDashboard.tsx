@@ -14,20 +14,24 @@ import { cn } from '@/lib/utils';
 export function ResultDashboard() {
   const { state, restartQuiz } = useQuiz();
   
-  const uniqueResponsesMap = new Map();
-  state.responses.forEach(r => uniqueResponsesMap.set(r.questionId, r));
-  const uniqueResponses = Array.from(uniqueResponsesMap.values());
-  
-  const total = state.questions.length || 100; 
-  const correct = uniqueResponses.filter(r => r.isCorrect).length;
-  const percentage = Math.min(Math.round((correct / total) * 100), 100);
-  const level = calculateLevel(percentage);
-  const status = getStatusFromPercentage(percentage);
-  
-  const totalAttempts = uniqueResponses.reduce((sum, r) => sum + r.attemptsUsed, 0);
-  const avgAttempts = uniqueResponses.length > 0 ? (totalAttempts / uniqueResponses.length).toFixed(1) : "0.0";
-  
-  const efficiency = totalAttempts > 0 ? ((correct / totalAttempts) * 100).toFixed(1) : "0.0";
+  const metrics = React.useMemo(() => {
+    const uniqueResponsesMap = new Map();
+    state.responses.forEach(r => uniqueResponsesMap.set(r.questionId, r));
+    const uniqueResponses = Array.from(uniqueResponsesMap.values());
+    
+    const total = state.questions.length || 100; 
+    const correct = uniqueResponses.filter(r => r.isCorrect).length;
+    const percentage = Math.min(Math.round((correct / total) * 100), 100);
+    const level = calculateLevel(percentage);
+    const status = getStatusFromPercentage(percentage);
+    
+    const totalAttempts = uniqueResponses.reduce((sum, r) => sum + r.attemptsUsed, 0);
+    const avgAttempts = uniqueResponses.length > 0 ? (totalAttempts / uniqueResponses.length).toFixed(1) : "0.0";
+    
+    const efficiency = totalAttempts > 0 ? ((correct / totalAttempts) * 100).toFixed(1) : "0.0";
+
+    return { total, correct, percentage, level, status, avgAttempts, efficiency };
+  }, [state.questions, state.responses]);
 
   const levelStyles = {
     'Excelente': 'text-green-600 bg-green-50 border-green-200',
@@ -45,7 +49,7 @@ export function ResultDashboard() {
         )}>
           <div className={cn(
             "w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl mx-auto flex items-center justify-center mb-6 md:mb-8 shadow-xl",
-            status === 'APROBADO' ? "bg-green-50 text-green-500" : "bg-red-50 text-red-500"
+            metrics.status === 'APROBADO' ? "bg-green-50 text-green-500" : "bg-red-50 text-red-500"
           )}>
             <Award className="w-8 h-8 md:w-12 md:h-12" />
           </div>
@@ -53,8 +57,8 @@ export function ResultDashboard() {
           <div className="space-y-3">
             <h1 className={cn(
               "text-3xl md:text-6xl font-black tracking-tight uppercase",
-              status === 'APROBADO' ? "text-slate-900" : "text-slate-900"
-            )}>{status}</h1>
+              metrics.status === 'APROBADO' ? "text-slate-900" : "text-slate-900"
+            )}>{metrics.status}</h1>
             <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] md:text-sm uppercase">Resultado Oficial Simulador</p>
           </div>
         </div>
@@ -63,26 +67,26 @@ export function ResultDashboard() {
         <StatCard 
           icon={<Target className="w-4 h-4" />} 
           label="Puntaje Total" 
-          value={`${correct} / ${total}`} 
+          value={`${metrics.correct} / ${metrics.total}`} 
           sub="Preguntas acertadas"
         />
         <StatCard 
           icon={<Zap className="w-4 h-4" />} 
           label="Calificación" 
-          value={`${percentage}%`} 
-          badge={level}
-          badgeStyle={levelStyles[level]}
+          value={`${metrics.percentage}%`} 
+          badge={metrics.level}
+          badgeStyle={levelStyles[metrics.level as keyof typeof levelStyles]}
         />
         <StatCard 
           icon={<Clock className="w-4 h-4" />} 
           label="Prom. Intentos" 
-          value={avgAttempts} 
+          value={metrics.avgAttempts} 
           sub="Esfuerzo por ítem"
         />
         <StatCard 
           icon={<TrendingUp className="w-4 h-4" />} 
           label="Eficiencia Neta" 
-          value={`${efficiency}%`} 
+          value={`${metrics.efficiency}%`} 
           sub="Precisión total"
         />
       </div>

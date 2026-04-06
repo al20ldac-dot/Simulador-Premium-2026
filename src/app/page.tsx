@@ -413,31 +413,9 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="bg-white py-12 md:py-20 border-t border-slate-100 mt-auto relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-        
-        <div className="max-w-7xl mx-auto px-6 flex flex-col items-center gap-12">
-          {/* Crédito del Desarrollador - DINÁMICO */}
-          <div className="flex flex-col items-center space-y-4 group">
-             <div className="flex items-center gap-3 px-6 py-2 bg-slate-900 rounded-full text-white shadow-2xl transition-transform group-hover:scale-105 duration-500">
-                <ShieldCheck className="w-4 h-4 text-blue-400" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] italic">Lead Software Architect</span>
-             </div>
-             <div className="text-center relative">
-                <h4 className="text-2xl md:text-5xl font-black tracking-tighter bg-gradient-to-r from-slate-900 via-blue-600 to-slate-900 bg-[length:200%_auto] animate-gradient-x bg-clip-text text-transparent uppercase">
-                  Leonardo Alvarado
-                </h4>
-                <div className="h-1.5 w-0 group-hover:w-full bg-blue-500 mx-auto mt-2 transition-all duration-700 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
-             </div>
-             <p className="text-slate-400 font-bold text-[10px] md:text-xs uppercase tracking-[0.4em] pt-2">Full Stack Development • UTELVT 2026</p>
-          </div>
-
-          {/* Ilustración o Decoración sutil */}
-          <div className="flex gap-4 opacity-20 group-hover:opacity-40 transition-opacity">
-             <div className="w-2 h-2 rounded-full bg-primary animate-bounce shadow-primary" />
-             <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]" />
-             <div className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce [animation-delay:0.4s]" />
-          </div>
+      <footer className="bg-white py-6 border-t border-slate-100 mt-auto">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-center">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">UTELVT • Carrera de TIC • 2026</p>
         </div>
       </footer>
 

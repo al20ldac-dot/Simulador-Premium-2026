@@ -23,8 +23,7 @@ interface QuizContextType {
   deleteResult: (id: string) => Promise<void>;
   logout: () => Promise<void>;
   setIdentity: (name: string, id: string) => void;
-  currentAttempts: number;
-  maxAttempts: number;
+
   isLoadingHistory: boolean;
   activeSessionId: string | null;
   identifiedName: string | null;
@@ -41,7 +40,7 @@ const QuizContext = createContext<QuizContextType | undefined>(undefined);
 export function QuizProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { firestore, user } = useFirebase();
-  const maxAttempts = 3;
+
   
   const [state, setState] = useState<QuizState>({
     questions: [],
@@ -51,7 +50,7 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [currentAttempts, setCurrentAttempts] = useState(0);
+
   const [lastFeedback, setLastFeedback] = useState<QuizContextType['lastFeedback']>(null);
   const [ranking, setRanking] = useState<any[]>([]);
   const [historyData, setHistoryData] = useState<any[]>([]);
@@ -125,7 +124,8 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
     
     const q = query(
       collection(firestore, 'resultados'),
-      where('userId', '==', identifiedId)
+      where('userId', '==', identifiedId),
+      where('status', '==', 'completed')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -301,7 +301,6 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
     };
 
     setState(newState);
-    setCurrentAttempts(0);
     setLastFeedback(null);
     
     // GUARDADO ASÍNCRONO: Iniciamos el guardado pero no hacemos esperar al usuario
@@ -323,27 +322,22 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
     if (lastFeedback && lastFeedback.isFinished) return;
 
     const isCorrect = answer === currentQuestion.correcta;
-    const newAttempts = currentAttempts + 1;
+
+    // Una sola respuesta por pregunta: siempre finaliza en el primer intento
+    const feedback = { isCorrect, showCorrect: true, selectedKey: answer, isFinished: true };
+    setLastFeedback(feedback);
     
-    if (isCorrect || newAttempts >= maxAttempts) {
-      const feedback = { isCorrect, showCorrect: true, selectedKey: answer, isFinished: true };
-      setLastFeedback(feedback);
-      
-      const updatedResponses: UserResponse[] = [...state.responses, {
-        questionId: currentQuestion.id,
-        attemptsUsed: newAttempts,
-        isCorrect,
-        selectedOption: answer,
-      }];
-      
-      const newState = { ...state, responses: updatedResponses };
-      setState(newState);
-      saveToCloud(newState, activeSessionId, currentName, globalId, subjectKey);
-    } else {
-      setCurrentAttempts(newAttempts);
-      setLastFeedback({ isCorrect: false, showCorrect: false, selectedKey: answer, isFinished: false });
-    }
-  }, [state, currentAttempts, lastFeedback, saveToCloud, activeSessionId, identifiedName, identifiedId]);
+    const updatedResponses: UserResponse[] = [...state.responses, {
+      questionId: currentQuestion.id,
+      attemptsUsed: 1,
+      isCorrect,
+      selectedOption: answer,
+    }];
+    
+    const newState = { ...state, responses: updatedResponses };
+    setState(newState);
+    saveToCloud(newState, activeSessionId, currentName, globalId, subjectKey);
+  }, [state, lastFeedback, saveToCloud, activeSessionId, identifiedName, identifiedId]);
 
   const nextQuestion = useCallback(() => {
     const currentName = identifiedName;
@@ -352,7 +346,6 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
     if (!activeSessionId || !currentName || !globalId) return;
     
     setLastFeedback(null);
-    setCurrentAttempts(0);
     
     if (state.currentQuestionIndex + 1 < state.questions.length) {
       setState(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex + 1 }));
@@ -468,11 +461,13 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
     router.push('/');
   }, [router]);
 
+  const contextValue = React.useMemo(() => ({
+    state, history: historyData, ranking, startQuiz, submitAnswer, nextQuestion, restartQuiz, finishQuizEarly, completeQuiz, deleteResult, logout, setIdentity,
+    lastFeedback, isLoadingHistory, activeSessionId, identifiedName
+  }), [state, historyData, ranking, startQuiz, submitAnswer, nextQuestion, restartQuiz, finishQuizEarly, completeQuiz, deleteResult, logout, setIdentity, lastFeedback, isLoadingHistory, activeSessionId, identifiedName]);
+
   return (
-    <QuizContext.Provider value={{ 
-      state, history: historyData, ranking, startQuiz, submitAnswer, nextQuestion, restartQuiz, finishQuizEarly, completeQuiz, deleteResult, logout, setIdentity,
-      currentAttempts, maxAttempts, lastFeedback, isLoadingHistory, activeSessionId, identifiedName
-    }}>
+    <QuizContext.Provider value={contextValue}>
       {children}
     </QuizContext.Provider>
   );

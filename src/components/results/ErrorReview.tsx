@@ -8,9 +8,21 @@ import { AlertCircle, CheckCircle, Info, BookOpen, Terminal } from 'lucide-react
 
 export function ErrorReview() {
   const { state } = useQuiz();
-  const incorrectResponses = state.responses.filter(r => !r.isCorrect);
   
-  if (incorrectResponses.length === 0) return null;
+  const incorrectData = React.useMemo(() => {
+    const questionsMap = new Map<string, any>();
+    state.questions.forEach(q => questionsMap.set(q.id, q));
+    
+    return state.responses
+      .filter(r => !r.isCorrect)
+      .map(r => ({
+        response: r,
+        question: questionsMap.get(r.questionId)
+      }))
+      .filter(item => item.question !== undefined);
+  }, [state.responses, state.questions]);
+  
+  if (incorrectData.length === 0) return null;
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -25,9 +37,7 @@ export function ErrorReview() {
       </div>
 
       <Accordion type="single" collapsible className="space-y-4 md:space-y-6">
-        {incorrectResponses.map((response, idx) => {
-          const question = state.questions.find(q => q.id === response.questionId);
-          if (!question) return null;
+        {incorrectData.map(({ question }, idx) => {
 
           return (
             <AccordionItem key={question.id} value={question.id} className="border-none rounded-2xl md:rounded-[2rem] px-4 md:px-8 bg-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden academic-shadow">
@@ -51,7 +61,7 @@ export function ErrorReview() {
                     <div className="grid gap-3">
                       {Object.entries(question.opciones).filter(([_, val]) => val && val !== "N/A").map(([key, val]) => (
                         <div key={key} className={`p-5 rounded-2xl border-2 text-sm flex justify-between items-center transition-all ${key === question.correcta ? 'bg-green-50 border-green-200 text-green-800 font-bold shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                          <span className="leading-relaxed"><span className="mr-3 font-black opacity-50">{key}</span> {val}</span>
+                          <span className="leading-relaxed"><span className="mr-3 font-black opacity-50">{key}</span> {String(val)}</span>
                           {key === question.correcta && <CheckCircle className="w-6 h-6 text-green-600" />}
                         </div>
                       ))}
