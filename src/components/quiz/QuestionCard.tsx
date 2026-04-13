@@ -22,7 +22,7 @@ export function QuestionCard() {
   };
 
 
-  const availableOptions = (Object.entries(currentQuestion.opciones) as [('A' | 'B' | 'C' | 'D'), string][])
+  const availableOptions = currentQuestion.displayOptions || (Object.entries(currentQuestion.opciones || {}) as [('A' | 'B' | 'C' | 'D'), string][])
     .filter(([_, value]) => value && value.trim() !== "" && value !== "N/A");
 
   return (
@@ -122,10 +122,11 @@ export function QuestionCard() {
 
           <CardContent className="p-6 md:p-16 space-y-8 md:space-y-10">
             <div className="grid gap-4 md:gap-5">
-              {availableOptions.map(([key, value]) => {
+              {availableOptions.map(([key, value], index) => {
                 const isCorrectAnswer = key === currentQuestion.correcta;
                 const isSelectedByFeedback = lastFeedback?.selectedKey === key;
                 const showFinalResults = lastFeedback?.showCorrect;
+                const displayLetter = ['A', 'B', 'C', 'D'][index] || key;
                 
                 return (
                   <button
@@ -148,7 +149,7 @@ export function QuestionCard() {
                       showFinalResults && !isCorrectAnswer && isSelectedByFeedback && "bg-red-500 text-white",
                       showFinalResults && !isCorrectAnswer && !isSelectedByFeedback && "bg-slate-100 text-slate-300"
                     )}>
-                      {key}
+                      {displayLetter}
                     </div>
                     <span className="text-sm md:text-lg font-semibold flex-1 leading-snug text-slate-700 break-words whitespace-pre-line pr-2">
                       {value}

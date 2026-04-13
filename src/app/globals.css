@@ -93,3 +93,13 @@ html, body {
   height: 100%;
   overscroll-behavior-y: none;
 }
+
+/* Ocultar barra de scroll visual manteniendo funcionalidad */
+.custom-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+
+.custom-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}

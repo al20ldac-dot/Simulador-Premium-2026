@@ -7,32 +7,46 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { GraduationCap, LayoutGrid, Clock, LogOut, Activity, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-export default function SimuladorPage() {
-  const { state, finishQuizEarly, restartQuiz, completeQuiz } = useQuiz();
-  const [timeLeft, setTimeLeft] = useState(7200); // 2 horas estrictas (7200 segundos)
-  const [isExiting, setIsProcessingExit] = useState(false);
+// Componente de temporizador aislado para evitar re-renderizados innecesarios cada segundo
+const TimerDisplay = ({ onZero }: { onZero: () => void }) => {
+  const [timeLeft, setTimeLeft] = useState(7200);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          onZero();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [onZero]);
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return <span className="font-mono">{formatTime(timeLeft)}</span>;
+};
+
+export default function SimuladorPage() {
+  const { state, finishQuizEarly, restartQuiz, completeQuiz } = useQuiz();
+  const [isExiting, setIsProcessingExit] = useState(false);
 
   const handleAutoFinish = useCallback(async () => {
     if (state.status === 'in_progress') {
       await completeQuiz();
     }
   }, [state.status, completeQuiz]);
-
-  useEffect(() => {
-    if (timeLeft === 0 && state.status === 'in_progress') {
-      handleAutoFinish();
-    }
-  }, [timeLeft, state.status, handleAutoFinish]);
 
   const handleExit = async () => {
     setIsProcessingExit(true);
@@ -43,12 +57,12 @@ export default function SimuladorPage() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
+  // Optimización O(1) de rendimiento para evitar N^2 re-calculos
+  const responsesMap = useMemo(() => {
+    const map = new Map();
+    state.responses.forEach(r => map.set(r.questionId, r));
+    return map;
+  }, [state.responses]);
 
   if (state.questions.length === 0) {
     return (
@@ -72,7 +86,7 @@ export default function SimuladorPage() {
             </div>
             <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-bold text-[11px] md:text-[13px] tracking-tight">
               <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
-              <span className="font-mono">{formatTime(timeLeft)}</span>
+              <TimerDisplay onZero={handleAutoFinish} />
             </div>
           </div>
 
@@ -115,7 +129,7 @@ export default function SimuladorPage() {
             <div className="p-4 md:p-6">
               <div className="grid grid-cols-6 xs:grid-cols-8 sm:grid-cols-10 lg:grid-cols-5 gap-1.5">
                 {state.questions.map((_, idx) => {
-                  const response = state.responses.find(r => r.questionId === state.questions[idx].id);
+                  const response = responsesMap.get(state.questions[idx].id);
                   const isCurrent = state.currentQuestionIndex === idx;
                   
                   return (

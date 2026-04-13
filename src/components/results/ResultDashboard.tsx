@@ -13,6 +13,14 @@ import { cn } from '@/lib/utils';
 
 export function ResultDashboard() {
   const { state, restartQuiz } = useQuiz();
+  const [showHeavyComponents, setShowHeavyComponents] = React.useState(false);
+
+  React.useEffect(() => {
+    // Desacoplar la renderización de componentes pesados (gráficos y docenas de acordiones)
+    // para evitar "congelar" la transición de la ruta del examen a los resultados.
+    const timer = setTimeout(() => setShowHeavyComponents(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
   
   const metrics = React.useMemo(() => {
     const uniqueResponsesMap = new Map();
@@ -105,17 +113,26 @@ export function ResultDashboard() {
         </div>
       </div>
 
-      <div className="space-y-10">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-            <BarChart3 className="w-5 h-5" />
+      {showHeavyComponents ? (
+        <>
+          <div className="space-y-10">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <h2 className="text-3xl font-black tracking-tight text-slate-900">Análisis Estadístico</h2>
+            </div>
+            <StatsCharts />
           </div>
-          <h2 className="text-3xl font-black tracking-tight text-slate-900">Análisis Estadístico</h2>
-        </div>
-        <StatsCharts />
-      </div>
 
-      <ErrorReview />
+          <ErrorReview />
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+          <div className="w-8 h-8 rounded-full border-4 border-primary/20 border-t-primary animate-spin mb-4" />
+          <p className="text-[10px] uppercase font-black tracking-widest animate-pulse">Generando reporte detallado...</p>
+        </div>
+      )}
     </div>
   );
 }

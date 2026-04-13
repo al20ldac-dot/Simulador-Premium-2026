@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from '@/hooks/use-toast';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
@@ -23,6 +23,8 @@ export default function Home() {
   const { user } = useUser();
   const firestore = useFirestore();
 
+  const [mounted, setMounted] = useState(false);
+
   const handleLogout = async () => {
     setMounted(false);
     localStorage.removeItem('tic_student_name');
@@ -30,10 +32,6 @@ export default function Home() {
     await logout();
     router.push('/login');
   };
-  
-  const [mounted, setMounted] = useState(false);
-  const [modeOpen, setModeOpen] = useState(false);
-  const [pendingSubject, setPendingSubject] = useState<'general' | 'is' | 'prog' | null>(null);
 
   // Perfil de Compañero
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -56,12 +54,7 @@ export default function Home() {
     setMounted(true);
   }, [router]);
 
-  const handleStartAttempt = (subject: 'general' | 'is' | 'prog' = 'general') => {
-    if (subject === 'prog') {
-      toast({ title: "Módulo en Desarrollo", description: "El simulador de Programación estará disponible próximamente." });
-      return;
-    }
-
+  const handleStartAttempt = () => {
     if (!displayName) {
       toast({ 
         variant: "destructive", 
@@ -71,41 +64,51 @@ export default function Home() {
       return;
     }
     
-    if (subject === 'is') {
-      setModeOpen(true);
-    } else {
-      startQuiz(displayName!, subject);
-    }
+    startQuiz(displayName!, 'general');
   };
 
+  const selectedName = selectedStudent?.displayName;
 
+  useEffect(() => {
+    if (!firestore || !selectedName) return;
+    
+    setIsLoadingProfile(true);
+    const q = query(
+      collection(firestore, 'resultados'),
+      where('displayName', '==', selectedName)
+    );
 
-  const selectMode = (mode: 'teorico' | 'practico') => {
-    setModeOpen(false);
-    if (displayName) {
-      startQuiz(displayName, 'is', mode);
-    }
-  };
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const results: any[] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Filtro de privacidad: en el perfil público del Top Estudiante solo mostramos sus intentos exitosos (>= 70)
+      const validResults = results.filter((r: any) => (r.percentage || 0) >= 70);
+      const sorted = validResults.sort((a: any, b: any) => (b.lastUpdate?.toMillis?.() || 0) - (a.lastUpdate?.toMillis?.() || 0));
+      setStudentHistory(sorted);
+      
+      const validGenerals = sorted.filter((r: any) => r.subjectKey === 'general' && (r.percentage || 0) >= 70);
+      if (validGenerals.length > 0) {
+          const best = validGenerals.sort((a: any, b: any) => {
+              if (b.percentage !== a.percentage) return b.percentage - a.percentage;
+              return a.duration - b.duration;
+          })[0];
+          setSelectedStudent((prev: any) => prev ? {...prev, percentage: best?.percentage || 0} : prev);
+      } else {
+          setSelectedStudent((prev: any) => prev ? {...prev, percentage: 0} : prev);
+      }
 
-  const viewStudentProfile = async (student: any) => {
+      setIsLoadingProfile(false);
+    }, (err) => {
+      console.error("Error al cargar historial en vivo:", err);
+      setIsLoadingProfile(false);
+    });
+
+    return () => unsubscribe();
+  }, [firestore, selectedName]);
+
+  const viewStudentProfile = (student: any) => {
     if (!firestore || !student) return;
     setSelectedStudent(student);
     setStudentHistory([]);
-    
-    setIsLoadingProfile(true);
-    try {
-      const q = query(
-        collection(firestore, 'resultados'),
-        where('displayName', '==', student.displayName)
-      );
-      const snap = await getDocs(q);
-      const results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setStudentHistory(results.sort((a: any, b: any) => (b.lastUpdate?.toMillis?.() || 0) - (a.lastUpdate?.toMillis?.() || 0)));
-    } catch (err) {
-      console.error("Error al cargar historial:", err);
-    } finally {
-      setIsLoadingProfile(false);
-    }
   };
 
   const toTitleCase = (str: string) => {
@@ -141,7 +144,7 @@ export default function Home() {
     }
   };
 
-  const generalRanking = ranking.filter(entry => entry.subjectKey === 'general');
+  const generalRanking = ranking.filter(entry => entry.subjectKey === 'general' && (entry.percentage || 0) >= 70);
 
   // Recargar el nombre de localStorage cuando el componente monta (tras redirect del login)
   useEffect(() => {
@@ -233,7 +236,7 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex justify-center lg:justify-start pt-2">
-                <Button onClick={() => handleStartAttempt('general')} size="lg" className="h-12 md:h-14 px-8 md:px-10 text-sm md:text-base font-bold rounded-xl bg-blue-600 hover:bg-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all gap-3 w-full sm:w-auto text-white border-none shrink-0 group">
+                <Button onClick={() => handleStartAttempt()} size="lg" className="h-12 md:h-14 px-8 md:px-10 text-sm md:text-base font-bold rounded-xl bg-blue-600 hover:bg-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all gap-3 w-full sm:w-auto text-white border-none shrink-0 group">
                   <Play className="w-4 h-4 md:w-5 md:h-5 fill-current transition-transform group-hover:scale-110" /> INICIAR PRÁCTICA GENERAL
                 </Button>
               </div>
@@ -241,56 +244,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="space-y-6 md:space-y-8 animate-fade-in">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-2">
-            <div className="space-y-2">
-              <h3 className="text-xl md:text-3xl font-black text-slate-900 uppercase tracking-tighter">Simuladores por Asignatura</h3>
-              <p className="text-slate-500 text-xs md:text-base font-medium">Refuerzo intensivo enfocado en áreas clave de la carrera.</p>
-            </div>
-            <div className="h-1 w-20 bg-primary/20 rounded-full hidden md:block mb-4" />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
-            <Card className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border-none shadow-xl academic-shadow transition-all hover:-translate-y-2">
-              <div className="absolute top-0 right-0 p-4 md:p-8 text-primary/10 group-hover:text-primary/20 transition-colors">
-                <BookOpen className="w-16 h-16 md:w-24 md:h-24 rotate-12" />
-              </div>
-              <div className="p-6 md:p-12 space-y-4 md:space-y-6 relative z-10">
-                <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-50 rounded-xl md:rounded-2xl flex items-center justify-center text-primary shadow-inner">
-                  <BookOpen className="w-5 h-5 md:w-7 md:h-7" />
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase">Ingeniería de Software</h4>
-                  <p className="text-slate-500 text-xs md:text-base leading-relaxed">Ciclo de vida, metodologías ágiles, UML, calidad y gestión de proyectos de software.</p>
-                </div>
-                <Button onClick={() => handleStartAttempt('is')} variant="outline" className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl font-black text-primary border-primary/20 hover:bg-primary hover:text-white transition-all gap-3 text-xs md:text-sm">
-                  SELECCIONAR MATERIA <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border-none shadow-xl academic-shadow transition-all opacity-70 grayscale-[0.5]">
-              <div className="absolute top-0 right-0 p-4 md:p-8 text-slate-300 transition-colors">
-                <Lock className="w-16 h-16 md:w-24 md:h-24 -rotate-12" />
-              </div>
-              <div className="p-6 md:p-12 space-y-4 md:space-y-6 relative z-10">
-                <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-100 rounded-xl md:rounded-2xl flex items-center justify-center text-slate-400 shadow-inner">
-                  <Cpu className="w-5 h-5 md:w-7 md:h-7" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <h4 className="text-xl md:text-2xl font-black text-slate-400 tracking-tight uppercase">Programación</h4>
-                    <Badge variant="secondary" className="bg-slate-200 text-slate-500 font-bold uppercase text-[7px] md:text-[8px]">Próximamente</Badge>
-                  </div>
-                  <p className="text-slate-400 text-xs md:text-base leading-relaxed">Algoritmos, estructuras de datos, POO, concurrencia y desarrollo avanzado.</p>
-                </div>
-                <Button disabled variant="outline" className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl font-black text-slate-300 border-slate-200 cursor-not-allowed gap-3 text-xs md:text-sm">
-                  MÓDULO DESACTIVADO <Lock className="w-3 h-3 md:w-4 md:h-4" />
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 items-start pt-6 md:pt-10 border-t border-slate-100">
           <div className="lg:col-span-8 space-y-6 md:space-y-8 animate-fade-in">
@@ -516,52 +470,7 @@ export default function Home() {
 
 
 
-      {/* Configuración de Simulación (IS) */}
-      <Dialog open={modeOpen} onOpenChange={setModeOpen}>
-        <DialogContent hideClose className="rounded-[2rem] md:rounded-[3.5rem] p-8 md:p-12 border-none shadow-2xl max-w-[90vw] md:max-w-xl bg-white overflow-hidden">
-          <DialogClose className="absolute top-4 right-4 md:top-8 md:right-8 w-10 h-10 md:w-14 md:h-14 flex items-center justify-center bg-slate-50 text-slate-400 rounded-full hover:bg-slate-100 hover:text-slate-600 transition-all active:scale-90 z-50 border border-slate-100">
-            <X className="w-5 h-5 md:w-7 md:h-7" />
-          </DialogClose>
 
-          <DialogHeader className="space-y-4 pt-4 md:pt-6">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-50/50 rounded-3xl flex items-center justify-center text-blue-600 mx-auto border border-blue-100/50 shadow-sm">
-              <BookOpen className="w-8 h-8 md:w-10 md:h-10" />
-            </div>
-            <DialogTitle className="text-3xl md:text-5xl font-black text-center tracking-tighter uppercase text-slate-900 mt-2">CONFIGURAR</DialogTitle>
-            <DialogDescription className="text-center text-sm md:text-lg font-medium text-slate-500">
-              Selecciona el enfoque de tu práctica académica.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 mt-10 md:mt-12">
-            <button 
-              onClick={() => selectMode('teorico')}
-              className="group p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] border-2 border-slate-100 bg-white hover:border-slate-300 transition-all text-center space-y-6 relative overflow-hidden flex flex-col items-center shadow-sm hover:shadow-lg"
-            >
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-50 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center text-slate-400 transition-all">
-                <Lightbulb className="w-6 h-6 md:w-8 md:h-8 group-hover:text-blue-500 transition-colors" />
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-black text-xl md:text-3xl text-slate-900 uppercase tracking-tight">TEÓRICO</h4>
-                <p className="text-[11px] md:text-sm font-medium text-slate-500 leading-relaxed px-2">65 reactivos de fundamentos y metodologías.</p>
-              </div>
-            </button>
-
-            <button 
-              onClick={() => selectMode('practico')}
-              className="group p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] border-2 border-slate-100 bg-white hover:border-slate-300 transition-all text-center space-y-6 relative overflow-hidden flex flex-col items-center shadow-sm hover:shadow-lg"
-            >
-              <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-50 rounded-2xl md:rounded-[1.5rem] flex items-center justify-center text-slate-400 transition-all">
-                <Zap className="w-6 h-6 md:w-8 md:h-8 group-hover:text-blue-500 transition-colors" />
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-black text-xl md:text-3xl text-slate-900 uppercase tracking-tight">PRÁCTICO</h4>
-                <p className="text-[11px] md:text-sm font-medium text-slate-500 leading-relaxed px-2">35 reactivos técnicos y resolución de casos.</p>
-              </div>
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

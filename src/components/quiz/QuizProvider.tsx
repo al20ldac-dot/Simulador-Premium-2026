@@ -288,13 +288,35 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
       return; 
     }
 
-    pool = pool.sort(() => Math.random() - 0.5);
+    // Mezclado Matemáticamente Perfecto (Fisher-Yates) para las PREGUNTAS
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
     
-    // Tomamos como máximo 100 del pool para no sobrecargar el estado
-    const finalPool = pool.slice(0, 100);
+    // Tomamos como máximo 100 del pool
+    let finalPool = pool.slice(0, 100);
+
+    // Pre-procesar y mezclar las OPCIONES una sola vez antes de iniciar
+    finalPool = finalPool.map((q: any) => {
+      const rawOptions = (Object.entries(q.opciones) as [('A' | 'B' | 'C' | 'D'), string][])
+        .filter(([_, value]) => value && typeof value === 'string' && value.trim() !== "" && value !== "N/A");
+
+      let shuffledOptions = [...rawOptions];
+      
+      // Mezclar aleatoriamente la posición de los literales solo si son 4 exactos (No tocar V/F)
+      if (rawOptions.length === 4) {
+        for (let i = shuffledOptions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+        }
+      }
+
+      return { ...q, displayOptions: shuffledOptions };
+    });
 
     const newState: QuizState = {
-      questions: finalPool.map((q: any) => ({ ...q })),
+      questions: finalPool,
       currentQuestionIndex: 0,
       responses: [],
       status: 'in_progress',
