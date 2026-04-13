@@ -20,6 +20,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Recuperar credenciales previas para autocompletar
+    const savedFirst = localStorage.getItem('tic_saved_first_name');
+    const savedLast = localStorage.getItem('tic_saved_last_name');
+    if (savedFirst) setFirstName(savedFirst);
+    if (savedLast) setLastName(savedLast);
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -49,6 +54,10 @@ export default function LoginPage() {
 
       localStorage.setItem('tic_student_name', displayTitleCase);
       localStorage.setItem('tic_student_id', normalizedLower);
+
+      // Guardar de forma permanente para autocompletar en el futuro
+      localStorage.setItem('tic_saved_first_name', first);
+      localStorage.setItem('tic_saved_last_name', last);
 
       // Guardar el registro en Firebase Firestore inmediatamente
       if (firestore) {
