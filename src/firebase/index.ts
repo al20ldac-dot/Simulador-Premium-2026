@@ -1,12 +1,15 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, setLogLevel } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   if (!getApps().length) {
     const firebaseApp = initializeApp(firebaseConfig);
+    
+    // Silenciar logs internos de Firebase para evitar mensajes feos de red en consola
+    setLogLevel('silent');
 
     return getSdks(firebaseApp);
   }

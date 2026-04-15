@@ -44,6 +44,18 @@ export default function Home() {
     || user?.displayName;
 
   useEffect(() => {
+    // Verificar si regresamos porque se canceló por offline
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('cancelled') === 'offline') {
+      toast({
+        variant: "destructive",
+        title: "Examen Cancelado",
+        description: "Tu intento fue invalidado automáticamente por pérdida de conexión a internet. No se guardó ningún dato."
+      });
+      // Limpiar la URL sin recargar la página
+      window.history.replaceState({}, '', '/');
+    }
+
     // Guard de ruta: si no hay sesión activa, redirigir al login
     const storedId = localStorage.getItem('tic_student_id');
     const storedName = localStorage.getItem('tic_student_name');

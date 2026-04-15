@@ -5,9 +5,9 @@ import { useQuiz } from '@/components/quiz/QuizProvider';
 import { QuestionCard } from '@/components/quiz/QuestionCard';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { GraduationCap, LayoutGrid, Clock, LogOut, Activity, Loader2 } from 'lucide-react';
+import { GraduationCap, LayoutGrid, Clock, LogOut, Activity, Loader2, WifiOff, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 // Componente de temporizador aislado para evitar re-renderizados innecesarios cada segundo
@@ -39,8 +39,45 @@ const TimerDisplay = ({ onZero }: { onZero: () => void }) => {
 };
 
 export default function SimuladorPage() {
-  const { state, finishQuizEarly, restartQuiz, completeQuiz } = useQuiz();
+  const { state, finishQuizEarly, restartQuiz, completeQuiz, cancelQuizByOffline, isOnline } = useQuiz();
   const [isExiting, setIsProcessingExit] = useState(false);
+
+  // ─── CUENTA REGRESIVA DE CANCELACIÓN POR OFFLINE ───────────────────────
+  const [offlineCountdown, setOfflineCountdown] = useState<number | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!isOnline && state.status === 'in_progress') {
+      // Inicia cuenta regresiva de 5 segundos
+      setOfflineCountdown(5);
+      countdownRef.current = setInterval(() => {
+        setOfflineCountdown(prev => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(countdownRef.current!);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (isOnline) {
+      // Si vuelve internet, limpiar el contador visual
+      // (pero la bandera interna ya está activada si se perdió — el intento sigue inválido)
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      setOfflineCountdown(null);
+    }
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [isOnline, state.status]);
+
+  // Mover el side effect fuera del updater de setState para evitar el error de React
+  useEffect(() => {
+    if (offlineCountdown === 0) {
+      cancelQuizByOffline();
+    }
+  }, [offlineCountdown, cancelQuizByOffline]);
+  // ────────────────────────────────────────────────────────────────────────
 
   const handleAutoFinish = useCallback(async () => {
     if (state.status === 'in_progress') {
@@ -77,7 +114,25 @@ export default function SimuladorPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 pb-10">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+
+      {/* ─── BANNER DE ALERTA: SIN CONEXIÓN ─────────────────────────────── */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white px-4 py-3 flex items-center justify-center gap-3 shadow-xl animate-pulse">
+          <WifiOff className="w-5 h-5 flex-shrink-0" />
+          <div className="text-center">
+            <span className="font-black text-sm uppercase tracking-widest">
+              ⚠ SIN CONEXIÓN — EXAMEN CANCELÁNDOSE EN{' '}
+              <span className="text-yellow-300 text-lg">{offlineCountdown ?? 5}s</span>
+            </span>
+            <p className="text-red-200 text-[11px] font-medium mt-0.5">
+              Este examen requiere conexión constante. El intento NO será guardado.
+            </p>
+          </div>
+        </div>
+      )}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+
+      <header className={cn("bg-white border-b border-slate-200 sticky z-50", !isOnline ? "top-[64px]" : "top-0")}>
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-primary text-[10px] md:text-[12px] uppercase tracking-widest">
@@ -87,6 +142,18 @@ export default function SimuladorPage() {
             <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg text-slate-700 font-bold text-[11px] md:text-[13px] tracking-tight">
               <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
               <TimerDisplay onZero={handleAutoFinish} />
+            </div>
+            {/* Indicador de conexión */}
+            <div className={cn(
+              "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+              isOnline
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-600 animate-pulse"
+            )}>
+              {isOnline
+                ? <><Wifi className="w-3 h-3" /> Conectado</>
+                : <><WifiOff className="w-3 h-3" /> Sin conexión</>
+              }
             </div>
           </div>
 
