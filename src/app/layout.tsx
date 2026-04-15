@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Sistema avanzado de simulación académica para la carrera de TIC con persistencia en Firestore.',
 };
 
+import { OfflineOverlay } from '@/components/ui/OfflineOverlay';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,6 +28,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <QuizProvider>
             {children}
+            <OfflineOverlay />
           </QuizProvider>
         </FirebaseClientProvider>
         <Toaster />

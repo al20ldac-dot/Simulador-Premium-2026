@@ -48,13 +48,8 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
   const isOnline = useOnlineStatus();
 
   // ─── MONITOR GLOBAL DE CONEXIÓN (TODO EL SISTEMA) ───────────────────────
-  useEffect(() => {
-    // Si se pierde el internet en cualquier parte del sistema, mandamos a /offline
-    // exceptuando si ya estamos en esa página para evitar bucles.
-    if (!isOnline && pathname !== '/offline') {
-      router.push('/offline');
-    }
-  }, [isOnline, pathname, router]);
+  // El UI de desconexión ahora se maneja mediante OfflineOverlay en layout.tsx
+  // No necesitamos router.push('/offline') para evitar fallos de carga de página.
   // ─────────────────────────────────────────────────────────────────────────
 
   // ─── PROTECCIÓN CONTRA PÉRDIDA DE INTERNET ───────────────────────────────
